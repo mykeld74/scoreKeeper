@@ -1,31 +1,36 @@
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
 
-interface Phase {
-	number: number;
-	description: string;
-}
+/**
+ * @typedef {Object} Phase
+ * @property {number} number - The phase number
+ * @property {string} description - The phase description
+ */
 
-interface Score {
-	round: number;
-	score: number;
-}
+/**
+ * @typedef {Object} Score
+ * @property {number} round - The round number
+ * @property {number} score - The score value
+ */
 
-interface Player {
-	id: number;
-	name: string;
-	scores: Score[];
-	completedPhases: number[];
-	currentPhase: number;
-}
+/**
+ * @typedef {Object} Player
+ * @property {number} id - The player's ID
+ * @property {string} name - The player's name
+ * @property {Score[]} scores - Array of player's scores
+ * @property {number[]} completedPhases - Array of completed phase numbers
+ * @property {number} currentPhase - Current phase number
+ */
 
-interface GameState {
-	players: Player[];
-	currentRound: number;
-	phases: Phase[];
-}
+/**
+ * @typedef {Object} GameState
+ * @property {Player[]} players - Array of players
+ * @property {number} currentRound - Current round number
+ * @property {Phase[]} phases - Array of game phases
+ */
 
-const PHASE_10_PHASES: Phase[] = [
+/** @type {Phase[]} */
+const PHASE_10_PHASES = [
 	{ number: 1, description: '2 sets of 3' },
 	{ number: 2, description: '1 set of 3 + 1 run of 4' },
 	{ number: 3, description: '1 set of 4 + 1 run of 4' },
@@ -38,7 +43,8 @@ const PHASE_10_PHASES: Phase[] = [
 	{ number: 10, description: '1 set of 5 + 1 set of 3' }
 ];
 
-const initialState: GameState = {
+/** @type {GameState} */
+const initialState = {
 	players: [],
 	currentRound: 1,
 	phases: PHASE_10_PHASES
@@ -49,7 +55,7 @@ const createGameStore = () => {
 	const storedState = browser ? localStorage.getItem('gameState') : null;
 	const initial = storedState ? JSON.parse(storedState) : initialState;
 
-	const { subscribe, set, update } = writable<GameState>(initial);
+	const { subscribe, update } = writable(initial);
 
 	// Subscribe to changes and save to localStorage only in browser
 	if (browser) {
@@ -58,8 +64,13 @@ const createGameStore = () => {
 		});
 	}
 
-	const addPlayer = (name: string): void => {
-		const newPlayer: Player = {
+	/**
+	 * Adds a new player to the game
+	 * @param {string} name - The player's name
+	 */
+	const addPlayer = (/** @type {string} */ name) => {
+		/** @type {Player} */
+		const newPlayer = {
 			id: Date.now(),
 			name,
 			scores: [],
@@ -73,17 +84,26 @@ const createGameStore = () => {
 		}));
 	};
 
-	const removePlayer = (playerId: number): void => {
+	/**
+	 * Removes a player from the game
+	 * @param {number} playerId - The ID of the player to remove
+	 */
+	const removePlayer = (/** @type {number} */ playerId) => {
 		update((state) => ({
 			...state,
-			players: state.players.filter((p) => p.id !== playerId)
+			players: state.players.filter((/** @type {Player} */ p) => p.id !== playerId)
 		}));
 	};
 
-	const addScore = (playerId: number, score: number): void => {
+	/**
+	 * Adds a score for a player
+	 * @param {number} playerId - The ID of the player
+	 * @param {number} score - The score to add
+	 */
+	const addScore = (/** @type {number} */ playerId, /** @type {number} */ score) => {
 		update((state) => ({
 			...state,
-			players: state.players.map((player) => {
+			players: state.players.map((/** @type {Player} */ player) => {
 				if (player.id === playerId) {
 					return {
 						...player,
@@ -95,10 +115,14 @@ const createGameStore = () => {
 		}));
 	};
 
-	const completePhase = (playerId: number): void => {
+	/**
+	 * Marks a player's current phase as complete
+	 * @param {number} playerId - The ID of the player
+	 */
+	const completePhase = (/** @type {number} */ playerId) => {
 		update((state) => ({
 			...state,
-			players: state.players.map((player) => {
+			players: state.players.map((/** @type {Player} */ player) => {
 				if (player.id === playerId) {
 					return {
 						...player,
@@ -111,16 +135,23 @@ const createGameStore = () => {
 		}));
 	};
 
-	const nextRound = (): void => {
+	/**
+	 * Advances the game to the next round
+	 */
+	const nextRound = () => {
 		update((state) => ({
 			...state,
 			currentRound: state.currentRound + 1
 		}));
 	};
 
-	const undoPhase = (playerId: number): void => {
+	/**
+	 * Undoes a player's last completed phase
+	 * @param {number} playerId - The ID of the player
+	 */
+	const undoPhase = (/** @type {number} */ playerId) => {
 		update((state) => {
-			const player = state.players.find((p) => p.id === playerId);
+			const player = state.players.find((/** @type {Player} */ p) => p.id === playerId);
 			if (player) {
 				player.completedPhases.pop();
 				player.currentPhase =
@@ -132,10 +163,13 @@ const createGameStore = () => {
 		});
 	};
 
-	const clearScores = (): void => {
+	/**
+	 * Clears all scores and resets phases
+	 */
+	const clearScores = () => {
 		update((state) => ({
 			...state,
-			players: state.players.map((player) => ({
+			players: state.players.map((/** @type {Player} */ player) => ({
 				...player,
 				scores: [],
 				completedPhases: [],

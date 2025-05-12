@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { gameStore } from '$lib/stores/gameStore';
+	import { browser } from '$app/environment';
 
 	interface SavedGame {
 		id: number;
@@ -16,24 +17,26 @@
 	let loading = true;
 	let error: string | null = null;
 
-	onMount(async () => {
+	onMount(() => {
 		try {
-			const db = await gameStore.initDB();
-			const transaction = db.transaction(['games'], 'readonly');
-			const store = transaction.objectStore('games');
-			const request = store.getAll();
-
-			request.onsuccess = () => {
-				savedGames = request.result;
-				loading = false;
-			};
-
-			request.onerror = () => {
-				error = 'Failed to load saved games';
-				loading = false;
-			};
+			const savedState = browser ? localStorage.getItem('gameState') : null;
+			if (savedState) {
+				const state = JSON.parse(savedState);
+				savedGames = [
+					{
+						id: Date.now(),
+						timestamp: Date.now(),
+						players: state.players.map((p: any) => ({
+							name: p.name,
+							currentPhase: p.currentPhase
+						})),
+						currentRound: state.currentRound
+					}
+				];
+			}
+			loading = false;
 		} catch (e) {
-			error = 'Failed to initialize database';
+			error = 'Failed to load saved games';
 			loading = false;
 		}
 	});
@@ -42,11 +45,10 @@
 		return new Date(timestamp).toLocaleString();
 	}
 
-	async function handleLoadGame(gameId: number) {
-		try {
-			await gameStore.loadGame(gameId);
-		} catch (e) {
-			error = 'Failed to load game';
+	function handleLoadGame() {
+		const savedState = browser ? localStorage.getItem('gameState') : null;
+		if (savedState) {
+			gameStore.clearScores();
 		}
 	}
 </script>
@@ -76,7 +78,7 @@
 							{/each}
 						</div>
 					</div>
-					<button class="button buttonPrimary" on:click={() => handleLoadGame(game.id)}>
+					<button class="button buttonPrimary" on:click={() => handleLoadGame()}>
 						Load Game
 					</button>
 				</div>
@@ -86,95 +88,5 @@
 </div>
 
 <style>
-	.savedGames {
-		margin-top: 2rem;
-		padding: 1rem;
-		background-color: white;
-		border-radius: 8px;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-
-		h2 {
-			font-size: 1.5rem;
-			font-weight: 600;
-			margin-bottom: 1rem;
-			color: #444;
-		}
-	}
-
-	.error {
-		color: #dc2626;
-		padding: 0.5rem;
-		background-color: #fee2e2;
-		border-radius: 4px;
-	}
-
-	.gamesList {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.gameCard {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 1rem;
-		background-color: #f9fafb;
-		border: 1px solid #e5e7eb;
-		border-radius: 6px;
-	}
-
-	.gameInfo {
-		flex: 1;
-	}
-
-	.gameDate {
-		font-size: 0.875rem;
-		color: #6b7280;
-		margin-bottom: 0.25rem;
-	}
-
-	.gameRound {
-		font-weight: 500;
-		margin-bottom: 0.5rem;
-	}
-
-	.gamePlayers {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-	}
-
-	.playerInfo {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.875rem;
-	}
-
-	.playerName {
-		font-weight: 500;
-	}
-
-	.playerPhase {
-		color: #6b7280;
-	}
-
-	.button {
-		padding: 0.5rem 1rem;
-		border: none;
-		border-radius: 4px;
-		font-size: 0.875rem;
-		cursor: pointer;
-		transition: background-color 0.2s;
-
-		&:hover {
-			opacity: 0.9;
-		}
-	}
-
-	.buttonPrimary {
-		background-color: #3b82f6;
-		color: white;
-	}
+	/* Component-specific styles can be added here if needed */
 </style>

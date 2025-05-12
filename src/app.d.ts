@@ -10,4 +10,8 @@ declare global {
 	}
 }
 
+declare module '$app/environment' {
+	export const browser: boolean;
+}
+
 export {};
