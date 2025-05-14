@@ -1,4 +1,12 @@
-/* Global styles */
+:root {
+	--primaryColor: #2a7770;
+	--secondaryColor: #465b51;
+	--accentColor: #185f78;
+	--warningColor: #eab308;
+	--dangerColor: #de0000;
+	--backgroundColor: #f5f5f5;
+	--textColor: #131616;
+}
 body {
 	font-family:
 		system-ui,
@@ -6,7 +14,7 @@ body {
 		sans-serif;
 	margin: 0;
 	padding: 0;
-	background-color: #f5f5f5;
+	background-color: var(--backgroundColor);
 }
 
 /* Container styles */
@@ -30,28 +38,28 @@ h1 {
 	font-size: 2rem;
 	font-weight: bold;
 	margin-bottom: 1.5rem;
-	color: #333;
+	color: var(--textColor);
 }
 
 h2 {
 	font-size: 1.5rem;
 	font-weight: 600;
 	margin-bottom: 1rem;
-	color: #444;
+	color: var(--textColor);
 }
 
 h3 {
 	font-size: 1.25rem;
 	font-weight: 600;
 	margin-bottom: 0.75rem;
-	color: #444;
+	color: var(--textColor);
 }
 
 h4 {
 	font-size: 1rem;
 	font-weight: 500;
 	margin-bottom: 0.5rem;
-	color: #555;
+	color: var(--textColor);
 }
 
 /* Section styles */
@@ -81,11 +89,11 @@ h4 {
 	border-radius: 4px;
 	font-size: 1rem;
 	cursor: pointer;
-	transition: background-color 0.2s;
+	transition: opacity 0.2s ease-in-out;
 }
 
 .button:hover {
-	opacity: 0.9;
+	opacity: 0.85;
 }
 
 .button:disabled {
@@ -94,33 +102,33 @@ h4 {
 }
 
 .buttonPrimary {
-	background-color: #3b82f6;
+	background-color: var(--primaryColor);
 	color: white;
 }
 
 .buttonSuccess {
-	background-color: #22c55e;
+	background-color: var(--primaryColor);
 	color: white;
 }
 
 .buttonWarning {
-	background-color: #eab308;
+	background-color: var(--accentColor);
 	color: white;
 }
 
 .buttonSecondary {
-	background-color: #6b7280;
+	background-color: var(--secondaryColor);
 	color: white;
 }
 
 .buttonPhase {
-	background-color: #8b5cf6;
+	background-color: var(--accentColor);
 	color: white;
 	width: 100%;
 }
 
 .buttonDanger {
-	background-color: #ef4444;
+	background-color: var(--dangerColor);
 	color: white;
 }
 

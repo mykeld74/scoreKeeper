@@ -1,35 +1,48 @@
-<script>
+<script lang="ts">
 	import { gameStore } from '$lib/stores/gameStore';
 	import ScoreTable from '$lib/components/ScoreTable.svelte';
 	import { ScoreKeeper } from '$lib';
 	import { slide, fade } from 'svelte/transition';
-	/** @typedef {import('$lib/stores/gameStore.js').Player} Player */
-	/** @typedef {import('$lib/stores/gameStore.js').Score} Score */
-	/** @typedef {import('$lib/stores/gameStore.js').Phase} Phase */
+	import type { Player, Score, Phase } from '$lib/stores/gameStore';
 
-	/** @type {string} */
 	let newPlayerName = $state('');
-	/** @type {Map<number, string>} */
-	let playerScores = $state(new Map());
-	/** @type {Set<number>} */
-	let completedPhasesThisRound = $state(new Set());
-	/** @type {Map<number, boolean>} */
-	let editingScores = $state(new Map());
-	/** @type {Map<number, string>} */
-	let editingRounds = $state(new Map());
-	/** @type {Map<number, Map<number, boolean>>} */
-	let editingRoundScores = $state(new Map());
-	/** @type {Map<number, Map<number, string>>} */
-	let editingRoundValues = $state(new Map());
-	/** @type {boolean} */
-	let showAddPlayer = $state(false);
-	/** @type {boolean} */
-	let showNewGameConfirm = $state(false);
-	/** @type {boolean} */
-	let isPhaseTen = $state(false);
+	let playerScores = $state<Map<number, string>>(new Map());
+	let completedPhasesThisRound = $state<Set<number>>(new Set());
+	let showAddPlayer = $state<boolean>(false);
+	let showNewGameConfirm = $state<boolean>(false);
+	let isPhaseTen = $state<boolean>(true);
+	let showRoundScores = $state<boolean>(false);
 
-	/** @type {boolean} */
-	let showRoundScores = $state(false);
+	let totalScores = $derived<Map<number, number>>(
+		new Map(
+			$gameStore.players.map((player: Player) => [
+				player.id,
+				player.scores.reduce((total: number, score: Score) => total + score.score, 0)
+			])
+		)
+	);
+
+	let canAdvanceRound = $derived(() => {
+		if (completedPhasesThisRound.size === 0 && isPhaseTen) {
+			return false;
+		} else {
+			return true;
+		}
+	});
+
+	$inspect(canAdvanceRound);
+
+	let hasCompletedGame = $derived(() =>
+		$gameStore.players.some((player: Player) => player.completedPhases.includes(10))
+	) as unknown as boolean;
+
+	let editingScores = $state<Map<number, boolean>>(new Map());
+
+	let editingRounds = $state<Map<number, string>>(new Map());
+
+	let editingRoundScores = $state<Map<number, Map<number, boolean>>>(new Map());
+
+	let editingRoundValues = $state<Map<number, Map<number, string>>>(new Map());
 
 	/**
 	 * Adds a new player to the game
@@ -49,7 +62,7 @@
 	 * @param {string} value - The new score value
 	 * @returns {void}
 	 */
-	function handleScoreInput(playerId, value) {
+	function handleScoreInput(playerId: number, value: string): void {
 		playerScores.set(playerId, value);
 	}
 
@@ -58,10 +71,11 @@
 	 * @param {number} playerId - The ID of the player
 	 * @returns {void}
 	 */
-	function handleCompletePhase(playerId) {
+	function handleCompletePhase(playerId: number): void {
 		if (!completedPhasesThisRound.has(playerId)) {
 			gameStore.completePhase(playerId);
 			completedPhasesThisRound.add(playerId);
+			completedPhasesThisRound = new Set(completedPhasesThisRound);
 		}
 	}
 
@@ -70,10 +84,11 @@
 	 * @param {number} playerId - The ID of the player
 	 * @returns {void}
 	 */
-	function handleUndoPhase(playerId) {
+	function handleUndoPhase(playerId: number): void {
 		if (completedPhasesThisRound.has(playerId)) {
 			gameStore.undoPhase(playerId);
 			completedPhasesThisRound.delete(playerId);
+			completedPhasesThisRound = new Set(completedPhasesThisRound);
 		}
 	}
 
@@ -81,9 +96,8 @@
 	 * Advances the game to the next round and adds scores
 	 * @returns {void}
 	 */
-	function handleNextRound() {
-		// Add scores for all players
-		$gameStore.players.forEach((/** @type {Player} */ player) => {
+	function handleNextRound(): void {
+		$gameStore.players.forEach((player: Player) => {
 			const score = playerScores.get(player.id);
 			const scoreNum = score ? parseInt(score) : 0;
 			if (!isNaN(scoreNum)) {
@@ -91,7 +105,7 @@
 			}
 		});
 
-		// Clear all score inputs
+		// Reset all state variables with new instances to trigger reactivity
 		playerScores = new Map();
 		completedPhasesThisRound = new Set();
 		editingScores = new Map();
@@ -99,35 +113,7 @@
 		editingRoundScores = new Map();
 		editingRoundValues = new Map();
 
-		// Advance to next round
 		gameStore.nextRound();
-	}
-
-	/**
-	 * Checks if the next round button should be enabled
-	 * @returns {boolean}
-	 */
-	function canAdvanceRound() {
-		// Check if at least one phase is completed this round
-		const hasCompletedPhase = completedPhasesThisRound.size > 0;
-
-		// Count players with scores
-		let playersWithScores = 0;
-		$gameStore.players.forEach((/** @type {Player} */ player) => {
-			const score = playerScores.get(player.id);
-			const scoreNum = score ? parseInt(score) : 0;
-			if (!isNaN(scoreNum)) {
-				playersWithScores++;
-			}
-		});
-
-		// Allow if all but one player has a score and at least one phase is completed
-		let canAdvance = hasCompletedPhase && playersWithScores >= $gameStore.players.length - 1;
-
-		if (!isPhaseTen) {
-			canAdvance = true;
-		}
-		return canAdvance;
 	}
 
 	/**
@@ -135,9 +121,9 @@
 	 * @param {number} playerId - The ID of the player
 	 * @returns {void}
 	 */
-	function toggleScoreEditing(playerId) {
+	function toggleScoreEditing(playerId: number): void {
 		editingScores.set(playerId, !editingScores.get(playerId));
-		editingScores = editingScores; // trigger reactivity
+		editingScores = editingScores;
 	}
 
 	/**
@@ -145,18 +131,14 @@
 	 * @param {number} playerId - The ID of the player
 	 * @returns {void}
 	 */
-	function saveEditedScores(playerId) {
-		const player = $gameStore.players.find((/** @type {Player} */ p) => p.id === playerId);
+	function saveEditedScores(playerId: number): void {
+		const player = $gameStore.players.find((p: Player) => p.id === playerId);
 		if (player) {
-			// Clear existing scores
 			player.scores = [];
-			// Add new scores
-			player.scores = player.scores.map(
-				(/** @type {Score} */ score, /** @type {number} */ index) => ({
-					round: index + 1,
-					score: parseInt(editingRounds.get(playerId)?.split(',')[index] || '0')
-				})
-			);
+			player.scores = player.scores.map((score: Score, index: number) => ({
+				round: index + 1,
+				score: parseInt(editingRounds.get(playerId)?.split(',')[index] || '0')
+			}));
 		}
 		toggleScoreEditing(playerId);
 	}
@@ -167,7 +149,7 @@
 	 * @param {number} round - The round number
 	 * @returns {void}
 	 */
-	function toggleRoundScoreEditing(playerId, round) {
+	function toggleRoundScoreEditing(playerId: number, round: number): void {
 		if (!editingRoundScores.has(playerId)) {
 			editingRoundScores.set(playerId, new Map());
 		}
@@ -182,12 +164,11 @@
 		const isEditing = !playerScores.get(round);
 		playerScores.set(round, isEditing);
 		if (isEditing) {
-			const player = $gameStore.players.find((/** @type {Player} */ p) => p.id === playerId);
-			const score = player?.scores.find((/** @type {Score} */ s) => s.round === round)?.score || 0;
+			const player = $gameStore.players.find((p: Player) => p.id === playerId);
+			const score = player?.scores.find((s: Score) => s.round === round)?.score || 0;
 			playerValues.set(round, score.toString());
 		}
 
-		// Create new Map instances to trigger reactivity
 		editingRoundScores = new Map(editingRoundScores);
 		editingRoundValues = new Map(editingRoundValues);
 	}
@@ -198,60 +179,35 @@
 	 * @param {number} round - The round number
 	 * @returns {void}
 	 */
-	function saveRoundScore(playerId, round) {
-		const player = $gameStore.players.find((/** @type {Player} */ p) => p.id === playerId);
-		if (player) {
-			const playerValues = editingRoundValues.get(playerId);
-			if (!playerValues) return;
+	function saveRoundScore(playerId: number, round: number): void {
+		const playerValues = editingRoundValues.get(playerId);
+		if (!playerValues) return;
 
-			const scoreValue = playerValues.get(round);
-			if (scoreValue === undefined) return;
+		const scoreValue = playerValues.get(round);
+		if (scoreValue === undefined) return;
 
-			const scoreNum = parseInt(scoreValue);
-			if (!isNaN(scoreNum)) {
-				const scoreIndex = player.scores.findIndex((/** @type {Score} */ s) => s.round === round);
-				if (scoreIndex !== -1) {
-					player.scores[scoreIndex].score = scoreNum;
-				} else {
-					player.scores.push({ round, score: scoreNum });
-				}
-				player.scores = player.scores; // trigger reactivity
-			}
+		const scoreNum = parseInt(scoreValue);
+		if (!isNaN(scoreNum)) {
+			gameStore.updateScore(playerId, round, scoreNum);
 		}
 		toggleRoundScoreEditing(playerId, round);
 	}
 
 	/**
-	 * Calculates the total score for a player
+	 * Gets the total score for a player
 	 * @param {number} playerId - The ID of the player
 	 * @returns {number}
 	 */
-	function getTotalScore(playerId) {
-		const player = $gameStore.players.find((/** @type {Player} */ p) => p.id === playerId);
-		return (
-			player?.scores.reduce(
-				(/** @type {number} */ total, /** @type {Score} */ score) => total + score.score,
-				0
-			) || 0
-		);
-	}
-
-	/**
-	 * Checks if any player has completed phase 10
-	 * @returns {boolean}
-	 */
-	function hasCompletedGame() {
-		return $gameStore.players.some((/** @type {Player} */ player) =>
-			player.completedPhases.includes(10)
-		);
+	function getTotalScore(playerId: number): number {
+		return totalScores.get(playerId) ?? 0;
 	}
 
 	/**
 	 * Handles the New Game button click
 	 * @returns {void}
 	 */
-	function handleNewGame() {
-		if (hasCompletedGame()) {
+	function handleNewGame(): void {
+		if (hasCompletedGame) {
 			gameStore.clearScores();
 		} else {
 			showNewGameConfirm = true;
@@ -262,7 +218,7 @@
 	 * Confirms starting a new game
 	 * @returns {void}
 	 */
-	function confirmNewGame() {
+	function confirmNewGame(): void {
 		gameStore.clearScores();
 		showNewGameConfirm = false;
 	}
@@ -271,7 +227,7 @@
 	 * Cancels starting a new game
 	 * @returns {void}
 	 */
-	function cancelNewGame() {
+	function cancelNewGame(): void {
 		showNewGameConfirm = false;
 	}
 </script>
@@ -318,7 +274,7 @@
 					<div class="section" transition:slide>
 						<h4>Current Phase: {player.currentPhase}</h4>
 						<div class="phaseRequirements">
-							{$gameStore.phases.find((/** @type {Phase} */ p) => p.number === player.currentPhase)
+							{$gameStore.phases.find((p: Phase) => p.number === player.currentPhase)
 								?.description ?? 'Game Complete'}
 						</div>
 						<div class="phaseGrid">
@@ -400,7 +356,15 @@
 						<input
 							type="number"
 							value={playerScores.get(player.id) ?? ''}
-							oninput={(e) => handleScoreInput(player.id, e.currentTarget.value)}
+							oninput={(e) => {
+								const value = e.currentTarget.value;
+								if (value === '') {
+									playerScores.delete(player.id);
+								} else {
+									playerScores.set(player.id, value);
+								}
+								playerScores = new Map(playerScores); // Create new Map to trigger reactivity
+							}}
 							placeholder="Score"
 							class="input"
 							data-player-id={player.id}

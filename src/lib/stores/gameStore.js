@@ -179,6 +179,32 @@ const createGameStore = () => {
 		}));
 	};
 
+	/**
+	 * Updates a score for a player in a specific round
+	 * @param {number} playerId - The ID of the player
+	 * @param {number} round - The round number
+	 * @param {number} score - The new score value
+	 */
+	const updateScore = (
+		/** @type {number} */ playerId,
+		/** @type {number} */ round,
+		/** @type {number} */ score
+	) => {
+		update((state) => {
+			const player = state.players.find((/** @type {Player} */ p) => p.id === playerId);
+			if (player) {
+				const scoreIndex = player.scores.findIndex((/** @type {Score} */ s) => s.round === round);
+				if (scoreIndex !== -1) {
+					player.scores[scoreIndex].score = score;
+				} else {
+					player.scores.push({ round, score });
+				}
+				player.scores = [...player.scores]; // Create new array to trigger reactivity
+			}
+			return state;
+		});
+	};
+
 	// Clear scores on page load
 	clearScores();
 
@@ -190,7 +216,8 @@ const createGameStore = () => {
 		completePhase,
 		nextRound,
 		undoPhase,
-		clearScores
+		clearScores,
+		updateScore
 	};
 };
 
