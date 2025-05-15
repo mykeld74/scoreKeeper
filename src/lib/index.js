@@ -1,3 +1,3 @@
-import ScoreKeeper from './images/scoreKeeper.svg';
+import ScoreKeeper from './images/ScoreKeeper.svg';
 
 export { ScoreKeeper };
