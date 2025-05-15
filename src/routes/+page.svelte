@@ -30,12 +30,9 @@
 		}
 	});
 
-	$inspect(canAdvanceRound);
-
 	let hasCompletedGame = $derived(() =>
 		$gameStore.players.some((player: Player) => player.completedPhases.includes(10))
-	) as unknown as boolean;
-
+	);
 	let editingScores = $state<Map<number, boolean>>(new Map());
 
 	let editingRounds = $state<Map<number, string>>(new Map());
@@ -207,7 +204,7 @@
 	 * @returns {void}
 	 */
 	function handleNewGame(): void {
-		if (hasCompletedGame) {
+		if ((hasCompletedGame() && isPhaseTen) || !isPhaseTen) {
 			gameStore.clearScores();
 		} else {
 			showNewGameConfirm = true;
@@ -295,8 +292,8 @@
 				{/if}
 
 				<!-- Scores -->
-				<div class="section">
-					<h4>Scores</h4>
+				<div class="section scoresSection">
+					<h4>Score</h4>
 
 					<div class="scoresList">
 						{#each player.scores as score}
@@ -344,7 +341,6 @@
 							{/if}
 						{/each}
 						<div class="totalScore">
-							<span>Total Score:</span>
 							<span>{getTotalScore(player.id)}</span>
 						</div>
 					</div>
@@ -365,7 +361,7 @@
 								}
 								playerScores = new Map(playerScores); // Create new Map to trigger reactivity
 							}}
-							placeholder="Score"
+							placeholder="Enter Score"
 							class="input"
 							data-player-id={player.id}
 						/>
